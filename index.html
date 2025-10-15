@@ -108,35 +108,56 @@ async function getBusTimes() {
         document.getElementById('output').textContent = 'Error fetching data: ' + error;
     }
 }
+async function searchStops(initialQuery = null, setTitle = false) {
+    const input = document.getElementById('stopSearch');
+    const query = (initialQuery ?? input.value).trim().toLowerCase();
 
+    if (!query) {
+        document.getElementById('stopResults').textContent = 'Please enter a stop name or ID to search.';
+        return;
+    }
 
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent('https://tfe-opendata.com/api/v1/stops')}`;
 
-        async function searchStops() {
-            const query = document.getElementById('stopSearch').value.toLowerCase();
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent('https://tfe-opendata.com/api/v1/stops')}`;
+    try {
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
 
-            try {
-                const response = await fetch(proxyUrl);
-                const data = await response.json();
+        const matches = data.stops.filter(stop =>
+            stop.name.toLowerCase().includes(query) ||
+            String(stop.stop_id).toLowerCase().includes(query)
+        );
 
-                const matches = data.stops.filter(stop => stop.name.toLowerCase().includes(query));
+        let results = '';
+        if (matches.length === 0) {
+            results = 'No matching stops found.';
+        } else {
+            for (const stop of matches) {
+                results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\nServices: ${stop.services.join(', ')}\n\n`;
+            }
 
-                let results = '';
-                if (matches.length === 0) {
-                    results = 'No matching stops found.';
-                } else {
-                    for (const stop of matches) {
-                        results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\nServices: ${stop.services.join(', ')}\n\n`;
-                    }
+            // Set page title and heading if requested
+            if (setTitle) {
+                document.title = `Live Bus Times – ${matches[0].name}`;
+                const pageTitle = document.querySelector('h1');
+                if (pageTitle) {
+                    pageTitle.textContent = `Bus Times – ${matches[0].name}`;
                 }
-
-                document.getElementById('stopResults').textContent = results;
-            } catch (error) {
-                document.getElementById('stopResults').textContent = 'Error fetching stop data: ' + error;
             }
         }
 
-        window.onload = getBusTimes;
+        document.getElementById('stopResults').textContent = results;
+    } catch (error) {
+        document.getElementById('stopResults').textContent = 'Error fetching stop data: ' + error;
+    }
+}
+
+
+window.onload = () => {
+    getBusTimes();
+    searchStops(defaultStopId, true); // true = update titles
+};
+
     </script>
 </body>
 </html>
