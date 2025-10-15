@@ -65,7 +65,7 @@
 
                 let output = '';
                 for (const bus of data.busTimes) {
-                    output += `🚌 Service: ${bus.nameService}\nStop: ${bus.stopName}\n\n`;
+                    output += `🚌 Service: ${bus.mnemoService} - ${bus.nameService}\nStop: ${bus.stopName}\n\n`;
                     for (const time of bus.timeDatas) {
                         output += `→ Destination: ${time.nameDest}\n   Time: ${time.time} (${time.minutes} min)\n\n`;
                     }
