@@ -54,52 +54,62 @@
     <pre id="stopResults"></pre>
 
     <script>
+        let defaultStopId = '36290151';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('stopId')) {
+            defaultStopId = urlParams.get('stopId');
+        } else {
+            const pathParts = window.location.pathname.split('/');
+            const lastPart = pathParts[pathParts.length - 1];
+            if (/^\d+$/.test(lastPart)) {
+                defaultStopId = lastPart;
+            }
+        }
+
+        document.getElementById('stopId').value = defaultStopId;
 
 
+async function getBusTimes() {
+    const stopId = document.getElementById('stopId').value;
+    const apiUrl = `https://tfe-opendata.com/api/v1/live_bus_times/${stopId}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
-// Determine default stopId from path or query string
-let defaultStopId = '36290151';
+    try {
+        const response = await fetch(proxyUrl);
+        const data = await response.json(); // data is an array
 
-// Check query string first
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.has('stopId')) {
-    defaultStopId = urlParams.get('stopId');
-} else {
-    // Fallback to path-based stopId
-    const pathParts = window.location.pathname.split('/');
-    const lastPart = pathParts[pathParts.length - 1];
-    if (/^\d+$/.test(lastPart)) {
-        defaultStopId = lastPart;
+        let output = '';
+        const now = new Date();
+
+        for (const bus of data) {
+            output += `🚌 Route: ${bus.routeName}\n\n`;
+            for (const dep of bus.departures) {
+                const [hours, minutes, seconds] = dep.ineoUTCTime.split(':').map(Number);
+                const depTimeLocal = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate(),
+                    hours,
+                    minutes,
+                    seconds
+                );
+
+                const diffMs = depTimeLocal - now;
+                const diffMin = Math.max(0, Math.round(diffMs / 60000)); // prevent negative values
+
+                output += `→ Destination: ${dep.destination}\n   Time: ${dep.ineoUTCTime} (${dep.isLive ? 'Live' : 'Scheduled'}) - ${diffMin} min\n\n`;
+            }
+            output += '-----------------------------\n';
+        }
+
+        document.getElementById('output').textContent = output;
+    } catch (error) {
+        document.getElementById('output').textContent = 'Error fetching data: ' + error;
     }
 }
 
-// Set the input field
-document.getElementById('stopId').value = defaultStopId;
 
-
-        async function getBusTimes() {
-            const stopId = document.getElementById('stopId').value;
-            const apiUrl = `http://ws.mybustracker.co.uk/?module=json&function=getBusTimes&key=4d32a91d0e86221c6693f2309a66149d&nb=4&stopId=${stopId}`;
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-
-            try {
-                const response = await fetch(proxyUrl);
-                const data = await response.json();
-
-                let output = '';
-                for (const bus of data.busTimes) {
-                    output += `🚌 Service: ${bus.mnemoService} - ${bus.nameService}\nStop: ${bus.stopName}\n\n`;
-                    for (const time of bus.timeDatas) {
-                        output += `→ Destination: ${time.nameDest}\n   Time: ${time.time} (${time.minutes} min)\n\n`;
-                    }
-                    output += '-----------------------------\n';
-                }
-
-                document.getElementById('output').textContent = output;
-            } catch (error) {
-                document.getElementById('output').textContent = 'Error fetching data: ' + error;
-            }
-        }
 
         async function searchStops() {
             const query = document.getElementById('stopSearch').value.toLowerCase();
@@ -126,7 +136,6 @@ document.getElementById('stopId').value = defaultStopId;
             }
         }
 
-        // Automatically fetch bus times on page load
         window.onload = getBusTimes;
     </script>
 </body>
