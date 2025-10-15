@@ -4,13 +4,26 @@
     <title>Live Bus Times</title>
 </head>
 <body>
-    <h1>Bus Times for Stop 36290151</h1>
+    <h1>Bus Times</h1>
+
+    <label for="stopId">Bus Stop ID:</label>
+    <input type="text" id="stopId" value="36290151">
     <button onclick="getBusTimes()">Fetch Bus Times</button>
-    <pre id="output"></pre>
+
+    <pre id="output">Loading bus times...</pre>
+
+    <hr>
+
+    <h2>Search for Bus Stops</h2>
+    <label for="stopSearch">Stop Name:</label>
+    <input type="text" id="stopSearch" placeholder="e.g. Balerno">
+    <button onclick="searchStops()">Search Stops</button>
+
+    <pre id="stopResults"></pre>
 
     <script>
         async function getBusTimes() {
-            const stopId = 36290151;
+            const stopId = document.getElementById('stopId').value;
             const apiUrl = `http://ws.mybustracker.co.uk/?module=json&function=getBusTimes&key=4d32a91d0e86221c6693f2309a66149d&nb=4&stopId=${stopId}`;
             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
@@ -31,8 +44,35 @@
             } catch (error) {
                 document.getElementById('output').textContent = 'Error fetching data: ' + error;
             }
-    }
+        }
+
+        async function searchStops() {
+            const query = document.getElementById('stopSearch').value.toLowerCase();
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent('https://tfe-opendata.com/api/v1/stops')}`;
+
+            try {
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+
+                const matches = data.stops.filter(stop => stop.name.toLowerCase().includes(query));
+
+                let results = '';
+                if (matches.length === 0) {
+                    results = 'No matching stops found.';
+                } else {
+                    for (const stop of matches) {
+                        results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\n\n`;
+                    }
+                }
+
+                document.getElementById('stopResults').textContent = results;
+            } catch (error) {
+                document.getElementById('stopResults').textContent = 'Error fetching stop data: ' + error;
+            }
+        }
+
+        // Automatically fetch bus times on page load
+        window.onload = getBusTimes;
     </script>
 </body>
 </html>
-``
