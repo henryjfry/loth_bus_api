@@ -93,7 +93,7 @@
                     results = 'No matching stops found.';
                 } else {
                     for (const stop of matches) {
-                        results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\n\n`;
+                        results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\nServices: ${stop.services.join(', ')}\n\n`;
                     }
                 }
 
