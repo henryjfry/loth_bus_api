@@ -1,26 +1,38 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bus Times</title>
+    <title>Live Bus Times</title>
 </head>
 <body>
-    <h1>Live Bus Times</h1>
+    <h1>Bus Times for Stop 36290151</h1>
     <button onclick="getBusTimes()">Fetch Bus Times</button>
     <pre id="output"></pre>
 
     <script>
         async function getBusTimes() {
             const stopId = 36290151;
-            const url = `https://ws.mybustracker.co.uk/?module=json&function=getBusTimes&key=4d32a91d0e86221c6693f2309a66149d&nb=4&stopId=${stopId}`;
+            const apiUrl = `http://ws.mybustracker.co.uk/?module=json&function=getBusTimes&key=4d32a91d0e86221c6693f2309a66149d&nb=4&stopId=${stopId}`;
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
             try {
-                const response = await fetch(url);
+                const response = await fetch(proxyUrl);
                 const data = await response.json();
-                document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+
+                let output = '';
+                for (const bus of data.busTimes) {
+                    output += `🚌 Service: ${bus.nameService}\nStop: ${bus.stopName}\n\n`;
+                    for (const time of bus.timeDatas) {
+                        output += `→ Destination: ${time.nameDest}\n   Time: ${time.time} (${time.minutes} min)\n\n`;
+                    }
+                    output += '-----------------------------\n';
+                }
+
+                document.getElementById('output').textContent = output;
             } catch (error) {
-                document.getElementById("output").textContent = "Error fetching data: " + error;
+                document.getElementById('output').textContent = 'Error fetching data: ' + error;
             }
-        }
+    }
     </script>
-</body
+</body>
+</html>
+``
