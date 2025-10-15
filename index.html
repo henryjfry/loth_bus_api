@@ -54,6 +54,29 @@
     <pre id="stopResults"></pre>
 
     <script>
+
+
+
+// Determine default stopId from path or query string
+let defaultStopId = '36290151';
+
+// Check query string first
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('stopId')) {
+    defaultStopId = urlParams.get('stopId');
+} else {
+    // Fallback to path-based stopId
+    const pathParts = window.location.pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    if (/^\d+$/.test(lastPart)) {
+        defaultStopId = lastPart;
+    }
+}
+
+// Set the input field
+document.getElementById('stopId').value = defaultStopId;
+
+
         async function getBusTimes() {
             const stopId = document.getElementById('stopId').value;
             const apiUrl = `http://ws.mybustracker.co.uk/?module=json&function=getBusTimes&key=4d32a91d0e86221c6693f2309a66149d&nb=4&stopId=${stopId}`;
