@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bus Times</title>
+</head>
+<body>
+    <h1>Live Bus Times</h1>
+    <button onclick="getBusTimes()">Fetch Bus Times</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function getBusTimes() {
+            const stopId = 36290151;
+            const url = `https://ws.mybustracker.co.uk/?module=json&function=getBusTimes&key=4d32a91d0e86221c6693f2309a66149d&nb=4&stopId=${stopId}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById("output").textContent = "Error fetching data: " + error;
+            }
+        }
+    </script>
+</body
