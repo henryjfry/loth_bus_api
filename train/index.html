@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Train Departures</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            font-size: 24px;
+        }
+        label, input, button {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 16px;
+        }
+        input {
+            padding: 5px;
+            width: 300px;
+        }
+        button {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Train Departures</h1>
+
+    <label for="stationCode">Station Code:</label>
+    <input type="text" id="stationCode" value="">
+    <button onclick="getTrainDepartures()">Fetch Train Departures</button>
+
+    <pre id="output">Loading train departures...</pre>
+
+    <script>
+        let defaultStationCode = 'EDB';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('station_code')) {
+            defaultStationCode = urlParams.get('station_code').toUpperCase();
+     }
+
+        document.getElementById('stationCode').value = defaultStationCode;
+
+        async function getTrainDepartures() {
+            const stationCode = document.getElementById('stationCode').value.trim().toUpperCase();
+            const apiUrl = `https://www.thetrainline.com/live/api/trains;action=departures;destinationCode=;originCode=${stationCode}?returnMeta=true`;
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+
+            try {
+                const response = await fetch(proxyUrl);
+                const jsonText = await response.text();
+                const cleanedText = jsonText.replace(/^'\{/, '{').replace(/\}'$/, '}');
+                const data = JSON.parse(cleanedText);
+
+                const services = data.data?.services || [];
+                let output = `Departures from ${stationCode}\n\n`;
+
+                if (services.length === 0) {
+                    output += 'No departures found.\n';
+                }
+
+                for (const service of services) {
+                    output += `🚆 ${service.origin} → ${service.destination}\n`;
+                    output += `Due: ${service.due} | Expected: ${service.expected} | Platform: ${service.platform} | Operator: ${service.operator}\n`;
+
+                    // Fetch calling points
+                    const detailsUrl = `https://www.thetrainline.com/live/api/trains;action=details;isDepartures=true;selectedStationCode=${stationCode};serviceId=${service.id}?returnMeta=true`;
+                    const detailsProxy = `https://corsproxy.io/?${encodeURIComponent(detailsUrl)}`;
+
+                    try {
+                        const detailsRes = await fetch(detailsProxy);
+                        const detailsText = await detailsRes.text();
+                        const cleanedDetails = detailsText.replace(/^'\{/, '{').replace(/\}'$/, '}');
+                        const detailsData = JSON.parse(cleanedDetails);
+
+                        const points = detailsData.data?.callingPoints || [];
+                        //const pointNames = points.map(p => p.station);
+                        const pointNames = points.map(p => `${p.station} ${p.scheduledAt}`);
+                        output += `Calling Points: ${pointNames.join(', ')}\n`;
+                    } catch (err) {
+                        output += `Calling Points: [Error fetching details]\n`;
+                 }
+
+                    output += '-----------------------------\n';
+                }
+
+                document.getElementById('output').textContent = output;
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error fetching train data: ' + error;
+            }
+        }
+
+        window.onload = getTrainDepartures;
+    </script>
+</body>
+</html>
