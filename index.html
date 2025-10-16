@@ -131,6 +131,10 @@
             }
         }
 
+
+ 
+
+
         async function searchStops(initialQuery = null, setTitle = false) {
             const input = document.getElementById('stopSearch');
             const query = (initialQuery ?? input.value).trim().toLowerCase();
@@ -151,24 +155,31 @@
                     String(stop.stop_id).toLowerCase().includes(query)
                 );
 
-                let results = '';
-                if (matches.length === 0) {
-                    results = 'No matching stops found.';
-                } else {
-                    for (const stop of matches) {
-                        results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\nServices: ${stop.services.join(', ')}\n\n`;
-                    }
 
-                    if (setTitle) {
-                        document.title = `Live Bus Times – ${matches[0].name}`;
-                        const pageTitle = document.querySelector('h1');
-                        if (pageTitle) {
-                            pageTitle.textContent = `Bus Times – ${matches[0].name}`;
-                        }
-                    }
-                }
+let results = '';
+if (matches.length === 0) {
+    results = 'No matching stops found.';
+} else {
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+    for (const stop of matches) {
+        const stopLink = `${baseUrl}?stopId=${stop.stop_id}`;
+        results += `🛑 Stop Name: ${stop.name}<br>` +
+            `Stop ID: <a href="${stopLink}">${stop.stop_id}</a><br>` +
+            `Destinations: ${stop.destinations.join(', ')}<br>` +
+            `Services: ${stop.services.join(', ')}<br><br>`;
+    }
 
-                document.getElementById('stopResults').textContent = results;
+    if (setTitle) {
+        document.title = `Live Bus Times – ${matches[0].name}`;
+        const pageTitle = document.querySelector('h1');
+        if (pageTitle) {
+            pageTitle.textContent = `Bus Times – ${matches[0].name}`;
+        }
+    }
+}
+
+document.getElementById('stopResults').innerHTML = results;
+
             } catch (error) {
                 document.getElementById('stopResults').textContent = 'Error fetching stop data: ' + error;
             }
@@ -180,6 +191,4 @@
         };
     </script>
 </body>
-
 </html>
-``
