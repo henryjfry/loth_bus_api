@@ -57,9 +57,13 @@
         let defaultStopId = '36290151';
 
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('stopId')) {
-            defaultStopId = urlParams.get('stopId');
-        } else {
+        
+if (urlParams.has('stopId')) {
+    defaultStopId = urlParams.get('stopId');
+} else if (urlParams.has('stopid')) {
+    defaultStopId = urlParams.get('stopid');
+}
+ else {
             const pathParts = window.location.pathname.split('/');
             const lastPart = pathParts[pathParts.length - 1];
             if (/^\d+$/.test(lastPart)) {
