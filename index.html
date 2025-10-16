@@ -3,6 +3,11 @@
 
 <head>
     <title>Live Bus Times</title>
+
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -10,13 +15,19 @@
             padding: 20px;
             line-height: 1.6;
         }
-        h1, h2 {
+
+        h1,
+        h2 {
             font-size: 24px;
         }
-        label, input, button {
+
+        label,
+        input,
+        button {
             font-size: 18px;
             margin: 10px 0;
         }
+
         pre {
             background-color: #f4f4f4;
             padding: 15px;
@@ -24,10 +35,12 @@
             overflow-x: auto;
             font-size: 16px;
         }
+
         input {
             padding: 5px;
             width: 300px;
         }
+
         button {
             padding: 8px 12px;
             cursor: pointer;
@@ -40,7 +53,7 @@
 
     <label for="stopId">Bus Stop ID:</label>
     <input type="text" id="stopId" value="36290151">
-    <button onclick="getBusTimes()">Fetch Bus Times</button>
+    <button onclick="updateStopId()">Fetch Bus Times</button>
 
     <pre id="output">Loading bus times...</pre>
 
@@ -57,13 +70,11 @@
         let defaultStopId = '36290151';
 
         const urlParams = new URLSearchParams(window.location.search);
-        
-if (urlParams.has('stopId')) {
-    defaultStopId = urlParams.get('stopId');
-} else if (urlParams.has('stopid')) {
-    defaultStopId = urlParams.get('stopid');
-}
- else {
+        if (urlParams.has('stopId')) {
+            defaultStopId = urlParams.get('stopId');
+        } else if (urlParams.has('stopid')) {
+            defaultStopId = urlParams.get('stopid');
+        } else {
             const pathParts = window.location.pathname.split('/');
             const lastPart = pathParts[pathParts.length - 1];
             if (/^\d+$/.test(lastPart)) {
@@ -73,95 +84,102 @@ if (urlParams.has('stopId')) {
 
         document.getElementById('stopId').value = defaultStopId;
 
+        function updateStopId() {
+            const newStopId = document.getElementById('stopId').value.trim();
+            if (newStopId) {
+                const newUrl = `${window.location.origin}${window.location.pathname}?stopId=${newStopId}`;
+                window.location.href = newUrl;
+            }
+        }
 
-async function getBusTimes() {
-    const stopId = document.getElementById('stopId').value;
-    const apiUrl = `https://tfe-opendata.com/api/v1/live_bus_times/${stopId}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+        async function getBusTimes() {
+            const stopId = document.getElementById('stopId').value;
+            const apiUrl = `https://tfe-opendata.com/api/v1/live_bus_times/${stopId}`;
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
-    try {
-        const response = await fetch(proxyUrl);
-        const data = await response.json(); // data is an array
+            try {
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
 
-        let output = '';
-        const now = new Date();
+                let output = '';
+                const now = new Date();
 
-        for (const bus of data) {
-            output += `🚌 Route: ${bus.routeName}\n\n`;
-            for (const dep of bus.departures) {
-                const [hours, minutes, seconds] = dep.ineoUTCTime.split(':').map(Number);
-                const depTimeLocal = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate(),
-                    hours,
-                    minutes,
-                    seconds
+                for (const bus of data) {
+                    output += `🚌 Route: ${bus.routeName}\n\n`;
+                    for (const dep of bus.departures) {
+                        const [hours, minutes, seconds] = dep.ineoUTCTime.split(':').map(Number);
+                        const depTimeLocal = new Date(
+                            now.getFullYear(),
+                            now.getMonth(),
+                            now.getDate(),
+                            hours,
+                            minutes,
+                            seconds
+                        );
+
+                        const diffMs = depTimeLocal - now;
+                        const diffMin = Math.max(0, Math.round(diffMs / 60000));
+
+                        output += `→ Destination: ${dep.destination}\n   Time: ${dep.ineoUTCTime} (${dep.isLive ? 'Live' : 'Scheduled'}) - ${diffMin} min\n\n`;
+                    }
+                    output += '-----------------------------\n';
+                }
+
+                document.getElementById('output').textContent = output;
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error fetching data: ' + error;
+            }
+        }
+
+        async function searchStops(initialQuery = null, setTitle = false) {
+            const input = document.getElementById('stopSearch');
+            const query = (initialQuery ?? input.value).trim().toLowerCase();
+
+            if (!query) {
+                document.getElementById('stopResults').textContent = 'Please enter a stop name or ID to search.';
+                return;
+            }
+
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent('https://tfe-opendata.com/api/v1/stops')}`;
+
+            try {
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+
+                const matches = data.stops.filter(stop =>
+                    stop.name.toLowerCase().includes(query) ||
+                    String(stop.stop_id).toLowerCase().includes(query)
                 );
 
-                const diffMs = depTimeLocal - now;
-                const diffMin = Math.max(0, Math.round(diffMs / 60000)); // prevent negative values
+                let results = '';
+                if (matches.length === 0) {
+                    results = 'No matching stops found.';
+                } else {
+                    for (const stop of matches) {
+                        results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\nServices: ${stop.services.join(', ')}\n\n`;
+                    }
 
-                output += `→ Destination: ${dep.destination}\n   Time: ${dep.ineoUTCTime} (${dep.isLive ? 'Live' : 'Scheduled'}) - ${diffMin} min\n\n`;
-            }
-            output += '-----------------------------\n';
-        }
-
-        document.getElementById('output').textContent = output;
-    } catch (error) {
-        document.getElementById('output').textContent = 'Error fetching data: ' + error;
-    }
-}
-async function searchStops(initialQuery = null, setTitle = false) {
-    const input = document.getElementById('stopSearch');
-    const query = (initialQuery ?? input.value).trim().toLowerCase();
-
-    if (!query) {
-        document.getElementById('stopResults').textContent = 'Please enter a stop name or ID to search.';
-        return;
-    }
-
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent('https://tfe-opendata.com/api/v1/stops')}`;
-
-    try {
-        const response = await fetch(proxyUrl);
-        const data = await response.json();
-
-        const matches = data.stops.filter(stop =>
-            stop.name.toLowerCase().includes(query) ||
-            String(stop.stop_id).toLowerCase().includes(query)
-        );
-
-        let results = '';
-        if (matches.length === 0) {
-            results = 'No matching stops found.';
-        } else {
-            for (const stop of matches) {
-                results += `🛑 Stop Name: ${stop.name}\nStop ID: ${stop.stop_id}\nDestinations: ${stop.destinations.join(', ')}\nServices: ${stop.services.join(', ')}\n\n`;
-            }
-
-            // Set page title and heading if requested
-            if (setTitle) {
-                document.title = `Live Bus Times – ${matches[0].name}`;
-                const pageTitle = document.querySelector('h1');
-                if (pageTitle) {
-                    pageTitle.textContent = `Bus Times – ${matches[0].name}`;
+                    if (setTitle) {
+                        document.title = `Live Bus Times – ${matches[0].name}`;
+                        const pageTitle = document.querySelector('h1');
+                        if (pageTitle) {
+                            pageTitle.textContent = `Bus Times – ${matches[0].name}`;
+                        }
+                    }
                 }
+
+                document.getElementById('stopResults').textContent = results;
+            } catch (error) {
+                document.getElementById('stopResults').textContent = 'Error fetching stop data: ' + error;
             }
         }
 
-        document.getElementById('stopResults').textContent = results;
-    } catch (error) {
-        document.getElementById('stopResults').textContent = 'Error fetching stop data: ' + error;
-    }
-}
-
-
-window.onload = () => {
-    getBusTimes();
-    searchStops(defaultStopId, true); // true = update titles
-};
-
+        window.onload = () => {
+            getBusTimes();
+            searchStops(defaultStopId, true);
+        };
     </script>
 </body>
+
 </html>
+``
